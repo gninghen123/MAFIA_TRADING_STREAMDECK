@@ -18,8 +18,9 @@ typedef void(^SchwabOAuthCompletionBlock)(NSString * _Nullable accessToken, NSEr
 @property (nonatomic, strong, readonly) NSString *accessToken;
 
 // Initialization
-- (instancetype)initWithClientId:(NSString *)clientId redirectURI:(NSString *)redirectURI;
-
+- (instancetype)initWithClientId:(NSString *)clientId
+                    clientSecret:(NSString *)clientSecret
+                     redirectURI:(NSString *)redirectURI;
 // OAuth Flow
 - (void)startAuthorizationFlowWithCompletion:(SchwabOAuthCompletionBlock)completion;
 - (void)handleAuthorizationResponse:(NSURL *)responseURL;

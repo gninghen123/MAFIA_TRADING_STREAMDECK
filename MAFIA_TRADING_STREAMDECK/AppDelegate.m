@@ -37,6 +37,7 @@
     NSString *redirectURI = @"https://127.0.0.1"; // URL callback configurato
     
     self.oauthManager = [[SchwabOAuthManager alloc] initWithClientId:clientId
+                                                        clientSecret:clientSecret
                                                          redirectURI:redirectURI];
 }
 
