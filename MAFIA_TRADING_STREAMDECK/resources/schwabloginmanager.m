@@ -3,7 +3,7 @@
 //  TradingApp
 //
 //  Gestione separata dell'autenticazione OAuth2 per Schwab
-//  Estratta da SchwabDataSource seguendo il pattern di IBKRLoginManager
+//  CORRETTO - Errori property risolti
 //
 
 #import "SchwabLoginManager.h"
@@ -70,7 +70,7 @@ static NSString *const kSchwabTokenURL = @"https://api.schwabapi.com/v1/oauth/to
     if (path) {
         NSDictionary *config = [NSDictionary dictionaryWithContentsOfFile:path];
         _appKey = config[@"AppKey"];
-        _appSecret = config[@"Secret"];  // ✅ CORRETTO: usa "Secret" invece di "AppSecret"
+        _appSecret = config[@"Secret"];
         _callbackURL = config[@"CallbackURL"];
         NSLog(@"✅ SchwabLoginManager: Loaded configuration from SchwabConfig.plist");
     } else {
@@ -110,6 +110,11 @@ static NSString *const kSchwabTokenURL = @"https://api.schwabapi.com/v1/oauth/to
         return self.accessToken;
     }
     return nil;
+}
+
+// ✅ AGGIUNGI QUESTO METODO per Customer ID
+- (NSString *)getCustomerId {
+    return [[NSUserDefaults standardUserDefaults] stringForKey:@"SchwabCustomerId"];
 }
 
 - (void)clearTokens {
@@ -244,6 +249,13 @@ static NSString *const kSchwabTokenURL = @"https://api.schwabapi.com/v1/oauth/to
                                              code:httpResponse.statusCode
                                          userInfo:@{NSLocalizedDescriptionKey: errorMessage}];
         NSLog(@"❌ SchwabLoginManager: %@", errorMessage);
+        
+        // ✅ LOG RESPONSE BODY per debug
+        if (data) {
+            NSString *responseString = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+            NSLog(@"📡 Response body: %@", responseString);
+        }
+        
         dispatch_async(dispatch_get_main_queue(), ^{
             if (completion) completion(NO, error);
         });
@@ -260,9 +272,22 @@ static NSString *const kSchwabTokenURL = @"https://api.schwabapi.com/v1/oauth/to
         return;
     }
     
+    // ✅ LOG COMPLETA RISPOSTA per debug
+    NSLog(@"📡 Token response: %@", responseDict);
+    
     // Extract tokens
     self.accessToken = responseDict[@"access_token"];
     self.refreshToken = responseDict[@"refresh_token"];
+    
+    // ✅ ESTRAI CUSTOMER ID se presente
+    NSString *customerId = responseDict[@"customer_id"];
+    if (customerId) {
+        [[NSUserDefaults standardUserDefaults] setObject:customerId forKey:@"SchwabCustomerId"];
+        [[NSUserDefaults standardUserDefaults] synchronize];
+        NSLog(@"✅ Customer ID salvato: %@", customerId);
+    } else {
+        NSLog(@"⚠️ Customer ID non presente nella risposta token");
+    }
     
     NSNumber *expiresIn = responseDict[@"expires_in"];
     if (expiresIn) {
@@ -316,6 +341,12 @@ static NSString *const kSchwabTokenURL = @"https://api.schwabapi.com/v1/oauth/to
         self.tokenExpiry = [NSDate dateWithTimeIntervalSince1970:[expiryTimestamp doubleValue]];
     }
     
+    // ✅ CARICA ANCHE CUSTOMER ID
+    NSString *customerId = [defaults stringForKey:@"SchwabCustomerId"];
+    if (customerId) {
+        NSLog(@"✅ Customer ID caricato: %@", customerId);
+    }
+    
     if (self.accessToken) {
         NSLog(@"✅ SchwabLoginManager: Loaded tokens from UserDefaults (expires: %@)", self.tokenExpiry);
     } else {
@@ -356,6 +387,7 @@ static NSString *const kSchwabTokenURL = @"https://api.schwabapi.com/v1/oauth/to
     [defaults removeObjectForKey:@"SchwabAccessToken"];
     [defaults removeObjectForKey:@"SchwabRefreshToken"];
     [defaults removeObjectForKey:@"SchwabTokenExpiry"];
+    [defaults removeObjectForKey:@"SchwabCustomerId"];  // ✅ PULISCI ANCHE QUESTO
     [defaults synchronize];
     
     self.accessToken = nil;
@@ -363,6 +395,19 @@ static NSString *const kSchwabTokenURL = @"https://api.schwabapi.com/v1/oauth/to
     self.tokenExpiry = nil;
     
     NSLog(@"🗑️ SchwabLoginManager: Cleared all tokens from UserDefaults");
+}
+
+// ✅ AGGIUNGI READONLY PROPERTIES per l'interfaccia pubblica
+- (NSString *)appKey {
+    return _appKey;
+}
+
+- (NSString *)appSecret {
+    return _appSecret;
+}
+
+- (NSString *)callbackURL {
+    return _callbackURL;
 }
 
 @end

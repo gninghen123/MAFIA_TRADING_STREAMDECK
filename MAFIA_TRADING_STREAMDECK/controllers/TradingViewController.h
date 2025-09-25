@@ -2,13 +2,14 @@
 //  TradingViewController.h
 //  TradingApp
 //
-//  Controller principale per gestire trading e streaming
+//  Controller principale per gestire trading e streaming - AGGIORNATO
 //
 
 #import <Cocoa/Cocoa.h>
 #import "SchwabStreamerService.h"
 #import "SchwabRESTService.h"
 #import "OrderWindowController.h"
+#import "SchwabLoginManager.h"  // ✅ AGGIUNGI QUESTO IMPORT
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -27,12 +28,12 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, strong) NSTextView *logTextView;
 @property (nonatomic, strong) NSSplitView *mainSplitView;
 @property (nonatomic, strong) NSView *toolbarView;
+@property (nonatomic, strong) NSButton *manualAuthButton;  // ✅ CONFERMATO
 
 // Services
 @property (nonatomic, strong) SchwabStreamerService *schwabStreamer;
 @property (nonatomic, strong) SchwabRESTService *restService;
 
-@property (nonatomic, strong) NSButton *manualAuthButton;  // <-- AGGIUNGI QUESTA LINEA
 // Configuration
 @property (nonatomic, strong) NSString *accessToken;
 
@@ -50,10 +51,10 @@ NS_ASSUME_NONNULL_BEGIN
 - (IBAction)connectToSchwab:(id)sender;
 - (IBAction)subscribeToSymbol:(id)sender;
 - (IBAction)refreshPositions:(id)sender;
-- (IBAction)refreshOrders:(id)sender;
+- (IBAction)refreshOrders:(id)sender;          // ✅ AGGIUNTO
 - (IBAction)newOrder:(id)sender;
 - (IBAction)accountChanged:(id)sender;
-- (IBAction)manualAuth:(id)sender;  // <-- AGGIUNGI QUESTA LINEA
+- (IBAction)manualAuth:(id)sender;             // ✅ AGGIUNTO
 
 // Configuration
 - (void)setupStreamer;

@@ -3,7 +3,7 @@
 //  TradingApp
 //
 //  Gestione separata dell'autenticazione OAuth2 per Schwab
-//  Estratta da SchwabDataSource seguendo il pattern di IBKRLoginManager
+//  AGGIORNATO con getCustomerId
 //
 
 #import <Foundation/Foundation.h>
@@ -25,6 +25,7 @@ NS_ASSUME_NONNULL_BEGIN
 // Token Management
 - (BOOL)hasValidToken;
 - (NSString *_Nullable)getValidAccessToken;
+- (NSString *_Nullable)getCustomerId;  // ✅ AGGIUNTO
 - (void)clearTokens;
 
 // Configuration - auto-loaded from SchwabConfig.plist

@@ -4,6 +4,7 @@
 //
 //  Implementazione controller principale
 //
+#import "SchwabLoginManager.h"  // ✅ AGGIUNGI QUESTO IMPORT
 
 #import "TradingViewController.h"
 
@@ -358,18 +359,42 @@
 }
 
 - (void)loadConfiguration {
-    // In un'app reale, questi andrebbero caricati da Keychain o file di configurazione sicuro
-    // Per ora li hardcodiamo per test
-    self.accessToken = @"YOUR_ACCESS_TOKEN_HERE";
-    self.customerId = @"YOUR_CUSTOMER_ID_HERE";
-    self.correlationId = [[NSUUID UUID] UUIDString];
+    SchwabLoginManager *loginManager = [SchwabLoginManager sharedManager];
+    self.accessToken = [loginManager getValidAccessToken];
     
-    NSLog(@"Configurazione caricata - Customer ID: %@", self.customerId);
+    // ✅ OTTIENI ANCHE IL CUSTOMER ID
+    self.customerId = [loginManager getCustomerId];
+    
+    if (self.accessToken) {
+        NSLog(@"✅ Token trovato, lunghezza: %lu caratteri", (unsigned long)self.accessToken.length);
+        [self appendToLog:[NSString stringWithFormat:@"✅ Token trovato (%lu caratteri)", (unsigned long)self.accessToken.length]];
+        
+        if (self.customerId) {
+            [self appendToLog:[NSString stringWithFormat:@"✅ Customer ID: %@", self.customerId]];
+        } else {
+            [self appendToLog:@"⚠️ Customer ID mancante - WebSocket non disponibile"];
+        }
+        
+        [self setupRESTService];
+        self.refreshButton.enabled = YES;
+        
+    } else {
+        NSLog(@"ℹ️ Nessun token salvato - fare login prima");
+        [self appendToLog:@"ℹ️ Nessun token - cliccare 'Connetti a Schwab'"];
+    }
+    
+    self.correlationId = [[NSUUID UUID] UUIDString];
 }
 
 - (void)setupStreamer {
     if (!self.accessToken || !self.customerId) {
-        [self appendToLog:@"Errore: credenziali mancanti"];
+        [self appendToLog:@"❌ Token o Customer ID mancanti per WebSocket"];
+        return;
+    }
+    
+    // ✅ AGGIUNGI CONTROLLO PER CUSTOMER ID
+    if ([self.customerId isEqualToString:@"YOUR_CUSTOMER_ID_HERE"] || !self.customerId) {
+        [self appendToLog:@"⚠️ Customer ID non configurato - WebSocket non disponibile"];
         return;
     }
     
@@ -382,7 +407,7 @@
 
 - (void)setupRESTService {
     if (!self.accessToken) {
-        [self appendToLog:@"Errore: access token mancante"];
+        [self appendToLog:@"❌ Token mancante per REST API"];
         return;
     }
     
@@ -391,10 +416,12 @@
 }
 
 - (void)loadAccounts {
+    [self appendToLog:@"🔄 Caricamento account..."];
+    
     [self.restService getAccountsWithCompletion:^(NSArray *accounts, NSError *error) {
         dispatch_async(dispatch_get_main_queue(), ^{
             if (error) {
-                [self appendToLog:[NSString stringWithFormat:@"Errore caricamento account: %@", error.localizedDescription]];
+                [self appendToLog:[NSString stringWithFormat:@"❌ Errore caricamento account: %@", error.localizedDescription]];
                 return;
             }
             
@@ -414,7 +441,7 @@
                 [self.accountPopup selectItemAtIndex:0];
                 self.placeOrderButton.enabled = YES;
                 self.refreshButton.enabled = YES;
-                [self appendToLog:[NSString stringWithFormat:@"Account caricati: %ld", accounts.count]];
+                [self appendToLog:[NSString stringWithFormat:@"✅ Caricati %ld account", accounts.count]];
                 
                 // Auto-load first account data
                 [self refreshPositions:nil];
@@ -423,29 +450,75 @@
         });
     }];
 }
-
+// ✅ AGGIUNGI QUESTO NUOVO ACTION PER IL BOTTONE "Auth Manuale"
+- (IBAction)manualAuth:(id)sender {
+    SchwabLoginManager *loginManager = [SchwabLoginManager sharedManager];
+    
+    // Force a new authentication flow
+    [self appendToLog:@"🔐 Avvio autenticazione manuale..."];
+    
+    [loginManager authenticateWithCompletion:^(BOOL success, NSError *error) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if (success) {
+                self.accessToken = [loginManager getValidAccessToken];
+                [self appendToLog:[NSString stringWithFormat:@"✅ Autenticazione manuale riuscita (%lu caratteri)", (unsigned long)self.accessToken.length]];
+                [self setupRESTService];
+                self.refreshButton.enabled = YES;
+            } else {
+                [self appendToLog:[NSString stringWithFormat:@"❌ Autenticazione manuale fallita: %@", error.localizedDescription]];
+            }
+        });
+    }];
+}
 #pragma mark - Actions
 
 - (IBAction)connectToSchwab:(id)sender {
-    if (!self.schwabStreamer) {
-        [self setupStreamer];
-    }
+    // ✅ PRIMA assicurati di avere un token valido
+    SchwabLoginManager *loginManager = [SchwabLoginManager sharedManager];
     
-    if (self.schwabStreamer.isConnected) {
-        [self.schwabStreamer disconnect];
-        self.connectButton.title = @"Connetti a Schwab";
-        self.subscribeButton.enabled = NO;
-        [self appendToLog:@"Disconnessione da Schwab..."];
-    } else {
-        [self.schwabStreamer connect];
-        self.connectButton.title = @"Disconnetti";
-        [self appendToLog:@"Connessione a Schwab in corso..."];
-    }
+    // Disabilita bottone durante il processo
+    self.connectButton.enabled = NO;
+    self.connectButton.title = @"Autenticando...";
+    [self appendToLog:@"🔐 Verifica autenticazione..."];
+    
+    [loginManager ensureTokensValidWithCompletion:^(BOOL success, NSError *error) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            self.connectButton.enabled = YES;
+            
+            if (success) {
+                self.accessToken = [loginManager getValidAccessToken];
+                NSLog(@"✅ Token ottenuto, lunghezza: %lu", (unsigned long)self.accessToken.length);
+                [self appendToLog:[NSString stringWithFormat:@"✅ Autenticazione riuscita (%lu caratteri)", (unsigned long)self.accessToken.length]];
+                
+                // Setup servizi con token valido
+                [self setupRESTService];
+                
+                // Ora prova a connettersi al WebSocket
+                [self setupStreamer];
+                if (self.schwabStreamer && !self.schwabStreamer.isConnected) {
+                    [self.schwabStreamer connect];
+                    self.connectButton.title = @"Disconnetti";
+                    self.subscribeButton.enabled = YES;
+                    [self appendToLog:@"🌐 Connessione WebSocket in corso..."];
+                } else {
+                    [self.schwabStreamer disconnect];
+                    self.connectButton.title = @"Connetti a Schwab";
+                    self.subscribeButton.enabled = NO;
+                    [self appendToLog:@"❌ Disconnessione da WebSocket"];
+                }
+                
+            } else {
+                NSLog(@"❌ Errore autenticazione: %@", error.localizedDescription);
+                [self appendToLog:[NSString stringWithFormat:@"❌ Errore autenticazione: %@", error.localizedDescription]];
+                self.connectButton.title = @"Connetti a Schwab";
+            }
+        });
+    }];
 }
 
 - (IBAction)subscribeToSymbol:(id)sender {
     if (!self.schwabStreamer.isConnected) {
-        [self appendToLog:@"Errore: non connesso"];
+        [self appendToLog:@"❌ WebSocket non connesso"];
         return;
     }
     
@@ -462,7 +535,7 @@
     }
     
     if (cleanedSymbols.count == 0) {
-        [self appendToLog:@"Errore: nessun simbolo valido"];
+        [self appendToLog:@"❌ Nessun simbolo valido"];
         return;
     }
     
@@ -470,8 +543,73 @@
     NSArray *fields = @[@"0", @"1", @"2", @"3", @"4", @"5", @"8", @"10", @"11", @"18"];
     
     [self.schwabStreamer subscribeToEquities:cleanedSymbols fields:fields];
-    [self appendToLog:[NSString stringWithFormat:@"Sottoscrizione a: %@", [cleanedSymbols componentsJoinedByString:@", "]]];
+    [self appendToLog:[NSString stringWithFormat:@"📊 Sottoscrizione a: %@", [cleanedSymbols componentsJoinedByString:@", "]]];
 }
+
+
+
+- (IBAction)refreshOrders:(id)sender {
+    if (!self.restService) {
+        [self appendToLog:@"❌ REST Service non disponibile"];
+        return;
+    }
+    
+    if (!self.selectedAccountId) {
+        [self appendToLog:@"❌ Nessun account selezionato"];
+        return;
+    }
+    
+    [self appendToLog:@"🔄 Caricamento ordini..."];
+    
+    [self.restService getOrders:self.selectedAccountId completion:^(NSArray *orders, NSError *error) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if (error) {
+                [self appendToLog:[NSString stringWithFormat:@"❌ Errore caricamento ordini: %@", error.localizedDescription]];
+                return;
+            }
+            
+            [self.ordersData removeAllObjects];
+            [self.ordersData addObjectsFromArray:orders];
+            [self.ordersTableView reloadData];
+            
+            [self appendToLog:[NSString stringWithFormat:@"✅ Caricati %ld ordini", orders.count]];
+        });
+    }];
+}
+
+// ✅ AGGIUNGI QUESTO METODO MANCANTE
+- (IBAction)newOrder:(id)sender {
+    if (!self.restService) {
+        [self appendToLog:@"❌ REST Service non disponibile"];
+        return;
+    }
+    
+    if (!self.selectedAccountId) {
+        [self appendToLog:@"❌ Nessun account selezionato"];
+        return;
+    }
+    
+    // Crea e mostra la finestra ordini
+    self.orderWindowController = [[OrderWindowController alloc] initWithRESTService:self.restService
+                                                                           accountId:self.selectedAccountId];
+    [self.orderWindowController showWindow:nil];
+}
+
+// ✅ AGGIUNGI QUESTO METODO MANCANTE
+- (IBAction)accountChanged:(id)sender {
+    NSInteger selectedIndex = self.accountPopup.indexOfSelectedItem;
+    if (selectedIndex >= 0 && selectedIndex < self.accountsData.count) {
+        NSDictionary *selectedAccount = self.accountsData[selectedIndex];
+        self.selectedAccountId = selectedAccount[@"accountId"];
+        
+        [self appendToLog:[NSString stringWithFormat:@"📋 Account selezionato: %@", self.selectedAccountId]];
+        
+        // Ricarica dati per il nuovo account
+        [self refreshPositions:nil];
+        [self refreshOrders:nil];
+    }
+}
+
 
 - (IBAction)refreshPositions:(id)sender {
     // Placeholder per refresh posizioni via REST API
@@ -482,7 +620,7 @@
 
 - (void)streamerDidConnect {
     dispatch_async(dispatch_get_main_queue(), ^{
-        [self appendToLog:@"✅ Connesso a Schwab Streamer"];
+        [self appendToLog:@"✅ WebSocket connesso"];
         self.subscribeButton.enabled = YES;
         self.connectButton.title = @"Disconnetti";
     });
@@ -491,8 +629,8 @@
 - (void)streamerDidDisconnect:(NSError *)error {
     dispatch_async(dispatch_get_main_queue(), ^{
         NSString *message = error ?
-            [NSString stringWithFormat:@"❌ Disconnesso: %@", error.localizedDescription] :
-            @"Disconnesso da Schwab";
+            [NSString stringWithFormat:@"❌ WebSocket disconnesso: %@", error.localizedDescription] :
+            @"WebSocket disconnesso";
         [self appendToLog:message];
         
         self.subscribeButton.enabled = NO;
@@ -508,7 +646,7 @@
 
 - (void)streamerDidReceiveError:(NSError *)error {
     dispatch_async(dispatch_get_main_queue(), ^{
-        [self appendToLog:[NSString stringWithFormat:@"❌ Errore: %@", error.localizedDescription]];
+        [self appendToLog:[NSString stringWithFormat:@"❌ WebSocket errore: %@", error.localizedDescription]];
     });
 }
 
