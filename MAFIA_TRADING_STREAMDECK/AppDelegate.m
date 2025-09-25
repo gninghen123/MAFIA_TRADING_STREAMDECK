@@ -6,14 +6,14 @@
 //
 
 #import <Cocoa/Cocoa.h>
-#import "SchwabOAuthManager.h"
+#import "schwabloginmanager.h"
 #import "TradingViewController.h"
 
 @interface AppDelegate : NSObject <NSApplicationDelegate>
 
 @property (nonatomic, strong) NSWindow *window;
 @property (nonatomic, strong) TradingViewController *tradingController;
-@property (nonatomic, strong) SchwabOAuthManager *oauthManager;
+@property (nonatomic, strong) SchwabLoginManager *oauthManager;
 
 // Menu actions
 - (IBAction)authenticateWithSchwab:(id)sender;
@@ -31,12 +31,11 @@
 }
 
 - (void)setupOAuthManager {
-    // Credenziali reali Schwab Developer
     NSString *clientId = @"XVweZPSbC0mMKbZJpGHbds6ueGmLRj1Z";
     NSString *clientSecret = @"enwEqrEQmPZlt7KS";
-    NSString *redirectURI = @"https://127.0.0.1"; // URL callback configurato
+    NSString *redirectURI = @"https://127.0.0.1"; // CORRECTED: Schwab richiede https
     
-    self.oauthManager = [[SchwabOAuthManager alloc] initWithClientId:clientId
+    self.oauthManager = [[SchwabLoginManager alloc] ini:clientId
                                                         clientSecret:clientSecret
                                                          redirectURI:redirectURI];
 }
@@ -129,54 +128,50 @@
     [alert addButtonWithTitle:@"Annulla"];
     
     if ([alert runModal] == NSAlertFirstButtonReturn) {
-        [self.oauthManager handleManualAuthorizationCode:codeInput.stringValue];
+        //[self.oauthManager handleManualAuthorizationCode:codeInput.stringValue];
     }
 }
 
 - (IBAction)authenticateWithSchwab:(id)sender {
-    [self.oauthManager startAuthorizationFlowWithCompletion:^(NSString *accessToken, NSError *error) {
+    SchwabLoginManager *loginManager = [SchwabLoginManager sharedManager];
+    
+    [loginManager ensureTokensValidWithCompletion:^(BOOL success, NSError *error) {
         dispatch_async(dispatch_get_main_queue(), ^{
-            if (error) {
-                NSAlert *alert = [[NSAlert alloc] init];
-                alert.messageText = @"Authentication Failed";
-                alert.informativeText = error.localizedDescription;
-                [alert addButtonWithTitle:@"OK"];
-                [alert runModal];
-            } else {
+            if (success) {
+                NSString *accessToken = [loginManager getValidAccessToken];
+                
+                // Aggiorna il trading controller
+                if (self.tradingController) {
+                    self.tradingController.accessToken = accessToken;
+                    [self.tradingController setupRESTService];
+                }
+                
                 NSAlert *alert = [[NSAlert alloc] init];
                 alert.messageText = @"Authentication Successful";
                 alert.informativeText = @"You can now access Schwab services.";
                 [alert addButtonWithTitle:@"OK"];
                 [alert runModal];
                 
-                // Update trading controller with new token
-                if (self.tradingController) {
-                    self.tradingController.accessToken = accessToken;
-                    [self.tradingController setupRESTService];
-                }
+            } else {
+                NSAlert *alert = [[NSAlert alloc] init];
+                alert.messageText = @"Authentication Failed";
+                alert.informativeText = error.localizedDescription;
+                [alert addButtonWithTitle:@"OK"];
+                [alert runModal];
             }
         });
     }];
 }
 
+// Aggiungi anche questo per clear tokens
 - (IBAction)clearCredentials:(id)sender {
-    NSAlert *alert = [[NSAlert alloc] init];
-    alert.messageText = @"Clear Credentials";
-    alert.informativeText = @"This will remove all stored authentication tokens.";
-    [alert addButtonWithTitle:@"Clear"];
-    [alert addButtonWithTitle:@"Cancel"];
-    alert.alertStyle = NSAlertStyleWarning;
+    [[SchwabLoginManager sharedManager] clearTokens];
     
-    NSModalResponse response = [alert runModal];
-    if (response == NSAlertFirstButtonReturn) {
-        [self.oauthManager clearTokens];
-        
-        NSAlert *confirmAlert = [[NSAlert alloc] init];
-        confirmAlert.messageText = @"Credentials Cleared";
-        confirmAlert.informativeText = @"All authentication tokens have been removed.";
-        [confirmAlert addButtonWithTitle:@"OK"];
-        [confirmAlert runModal];
-    }
+    NSAlert *alert = [[NSAlert alloc] init];
+    alert.messageText = @"Credentials Cleared";
+    alert.informativeText = @"All authentication tokens have been removed.";
+    [alert addButtonWithTitle:@"OK"];
+    [alert runModal];
 }
 
 - (IBAction)showAbout:(id)sender {

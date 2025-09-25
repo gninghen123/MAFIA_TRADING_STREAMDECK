@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		95FFC4C02E8552E30075EC70 /* SchwabConfig.plist in Resources */ = {isa = PBXBuildFile; fileRef = 95FFC4BF2E8552E30075EC70 /* SchwabConfig.plist */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		95FFC1892E853F270075EC70 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -27,6 +31,7 @@
 		95FFC1772E853F250075EC70 /* MAFIA_TRADING_STREAMDECK.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MAFIA_TRADING_STREAMDECK.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		95FFC1882E853F270075EC70 /* MAFIA_TRADING_STREAMDECKTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MAFIA_TRADING_STREAMDECKTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		95FFC1922E853F270075EC70 /* MAFIA_TRADING_STREAMDECKUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MAFIA_TRADING_STREAMDECKUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		95FFC4BF2E8552E30075EC70 /* SchwabConfig.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = SchwabConfig.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -75,6 +80,7 @@
 		95FFC16E2E853F250075EC70 = {
 			isa = PBXGroup;
 			children = (
+				95FFC4BF2E8552E30075EC70 /* SchwabConfig.plist */,
 				95FFC1792E853F250075EC70 /* MAFIA_TRADING_STREAMDECK */,
 				95FFC18B2E853F270075EC70 /* MAFIA_TRADING_STREAMDECKTests */,
 				95FFC1952E853F270075EC70 /* MAFIA_TRADING_STREAMDECKUITests */,
@@ -211,6 +217,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				95FFC4C02E8552E30075EC70 /* SchwabConfig.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
