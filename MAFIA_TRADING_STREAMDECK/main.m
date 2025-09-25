@@ -1,15 +1,18 @@
 //
 //  main.m
-//  MAFIA_TRADING_STREAMDECK
+//  SchwabTradingApp
 //
-//  Created by fabio gattone on 25/09/25.
+//  Entry point - no Storyboard needed
 //
 
 #import <Cocoa/Cocoa.h>
+#import "AppDelegate.h"
 
 int main(int argc, const char * argv[]) {
     @autoreleasepool {
-        // Setup code that might create autoreleased objects goes here.
+        NSApplication *app = [NSApplication sharedApplication];
+        AppDelegate *delegate = [[AppDelegate alloc] init];
+        [app setDelegate:delegate];
+        return NSApplicationMain(argc, argv);
     }
-    return NSApplicationMain(argc, argv);
 }
