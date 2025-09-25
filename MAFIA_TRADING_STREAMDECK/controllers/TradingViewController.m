@@ -66,7 +66,15 @@
     [self.connectButton setAction:@selector(connectToSchwab:)];
     [self.connectButton setBezelStyle:NSBezelStyleRounded];
     [toolbarView addSubview:self.connectButton];
-    
+
+    // AGGIUNGI QUESTE LINEE:
+    self.manualAuthButton = [[NSButton alloc] init];
+    self.manualAuthButton.translatesAutoresizingMaskIntoConstraints = NO;
+    [self.manualAuthButton setTitle:@"Auth Manuale"];
+    [self.manualAuthButton setTarget:self];
+    [self.manualAuthButton setAction:@selector(manualAuth:)];
+    [self.manualAuthButton setBezelStyle:NSBezelStyleRounded];
+    [toolbarView addSubview:self.manualAuthButton];
     // Symbol input
     NSTextField *symbolLabel = [[NSTextField alloc] init];
     symbolLabel.translatesAutoresizingMaskIntoConstraints = NO;
@@ -318,6 +326,11 @@
         [self.connectButton.topAnchor constraintEqualToAnchor:toolbar.topAnchor constant:10],
         [self.connectButton.leadingAnchor constraintEqualToAnchor:self.accountPopup.trailingAnchor constant:20],
         [self.connectButton.widthAnchor constraintEqualToConstant:150],
+
+        // AGGIUNGI QUESTE LINEE:
+        [self.manualAuthButton.topAnchor constraintEqualToAnchor:toolbar.topAnchor constant:10],
+        [self.manualAuthButton.leadingAnchor constraintEqualToAnchor:self.connectButton.trailingAnchor constant:10],
+        [self.manualAuthButton.widthAnchor constraintEqualToConstant:120],
         
         [self.symbolTextField.topAnchor constraintEqualToAnchor:self.accountPopup.bottomAnchor constant:10],
         [self.symbolTextField.leadingAnchor constraintEqualToAnchor:toolbar.leadingAnchor],

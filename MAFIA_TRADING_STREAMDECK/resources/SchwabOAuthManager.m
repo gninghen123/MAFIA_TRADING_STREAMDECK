@@ -68,15 +68,33 @@
 }
 
 - (void)handleAuthorizationResponse:(NSURL *)responseURL {
+    NSLog(@"Handling authorization response: %@", responseURL.absoluteString);
+    
     NSURLComponents *components = [NSURLComponents componentsWithURL:responseURL resolvingAgainstBaseURL:NO];
     
     // Find authorization code in query parameters
     NSString *authCode = nil;
+    NSString *error = nil;
+    
     for (NSURLQueryItem *item in components.queryItems) {
+        NSLog(@"Query parameter: %@ = %@", item.name, item.value);
+        
         if ([item.name isEqualToString:@"code"]) {
             authCode = item.value;
-            break;
+        } else if ([item.name isEqualToString:@"error"]) {
+            error = item.value;
         }
+    }
+    
+    if (error) {
+        NSError *authError = [NSError errorWithDomain:@"SchwabOAuthError"
+                                                 code:1002
+                                             userInfo:@{NSLocalizedDescriptionKey: [NSString stringWithFormat:@"OAuth error: %@", error]}];
+        if (self.pendingCompletion) {
+            self.pendingCompletion(nil, authError);
+            self.pendingCompletion = nil;
+        }
+        return;
     }
     
     if (!authCode) {
@@ -90,10 +108,11 @@
         return;
     }
     
+    NSLog(@"Found authorization code: %@", authCode);
+    
     // Exchange authorization code for access token
     [self exchangeCodeForToken:authCode];
 }
-
 - (void)exchangeCodeForToken:(NSString *)authCode {
     NSURL *tokenURL = [NSURL URLWithString:@"https://api.schwabapi.com/v1/oauth/token"];
     NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:tokenURL];
@@ -325,5 +344,24 @@
     
     SecItemDelete((__bridge CFDictionaryRef)query);
 }
+
+- (void)handleManualAuthorizationCode:(NSString *)authCode {
+    if (!authCode || authCode.length == 0) {
+        NSError *error = [NSError errorWithDomain:@"SchwabOAuthError"
+                                             code:1003
+                                         userInfo:@{NSLocalizedDescriptionKey: @"Authorization code is empty"}];
+        if (self.pendingCompletion) {
+            self.pendingCompletion(nil, error);
+            self.pendingCompletion = nil;
+        }
+        return;
+    }
+    
+    NSLog(@"Processing manual authorization code: %@", authCode);
+    
+    // Exchange authorization code for access token
+    [self exchangeCodeForToken:authCode];
+}
+
 
 @end

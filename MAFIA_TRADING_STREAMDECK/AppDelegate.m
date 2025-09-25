@@ -84,7 +84,7 @@
     [appMenu addItemWithTitle:@"Show All" action:@selector(unhideAllApplications:) keyEquivalent:@""];
     [appMenu addItem:[NSMenuItem separatorItem]];
     [appMenu addItemWithTitle:@"Quit TradingApp" action:@selector(terminate:) keyEquivalent:@"q"];
-    
+    [appMenu addItemWithTitle:@"Codice Manuale" action:@selector(manualCodeEntry:) keyEquivalent:@""];
     [appMenuItem setSubmenu:appMenu];
     [mainMenu addItem:appMenuItem];
     
@@ -115,6 +115,23 @@
 }
 
 #pragma mark - OAuth Handling
+
+- (IBAction)manualCodeEntry:(id)sender {
+    NSAlert *alert = [[NSAlert alloc] init];
+    alert.messageText = @"Inserisci Codice Manualmente";
+    alert.informativeText = @"Copia il codice dalla URL del browser dopo l'autorizzazione";
+    
+    NSTextField *codeInput = [[NSTextField alloc] initWithFrame:NSMakeRect(0, 0, 300, 24)];
+    codeInput.placeholderString = @"Incolla il codice qui...";
+    alert.accessoryView = codeInput;
+    
+    [alert addButtonWithTitle:@"OK"];
+    [alert addButtonWithTitle:@"Annulla"];
+    
+    if ([alert runModal] == NSAlertFirstButtonReturn) {
+        [self.oauthManager handleManualAuthorizationCode:codeInput.stringValue];
+    }
+}
 
 - (IBAction)authenticateWithSchwab:(id)sender {
     [self.oauthManager startAuthorizationFlowWithCompletion:^(NSString *accessToken, NSError *error) {

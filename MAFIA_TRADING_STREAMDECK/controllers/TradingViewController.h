@@ -32,7 +32,7 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, strong) SchwabStreamerService *schwabStreamer;
 @property (nonatomic, strong) SchwabRESTService *restService;
 
-
+@property (nonatomic, strong) NSButton *manualAuthButton;  // <-- AGGIUNGI QUESTA LINEA
 // Configuration
 @property (nonatomic, strong) NSString *accessToken;
 
@@ -53,6 +53,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (IBAction)refreshOrders:(id)sender;
 - (IBAction)newOrder:(id)sender;
 - (IBAction)accountChanged:(id)sender;
+- (IBAction)manualAuth:(id)sender;  // <-- AGGIUNGI QUESTA LINEA
 
 // Configuration
 - (void)setupStreamer;

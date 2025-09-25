@@ -16,6 +16,8 @@ typedef void(^SchwabOAuthCompletionBlock)(NSString * _Nullable accessToken, NSEr
 @property (nonatomic, strong, readonly) NSString *clientId;
 @property (nonatomic, strong, readonly) NSString *redirectURI;
 @property (nonatomic, strong, readonly) NSString *accessToken;
+// Manual Code Entry
+- (void)handleManualAuthorizationCode:(NSString *)authCode;
 
 // Initialization
 - (instancetype)initWithClientId:(NSString *)clientId
